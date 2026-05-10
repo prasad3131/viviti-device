@@ -1,8 +1,10 @@
 const express = require('express');
+const { execSync } = require('child_process');
 const config = require('./config');
 const { isWifiConnected, startHotspot, stopHotspot } = require('./services/wifi');
-const { startHeartbeat } = require('./services/heartbeat');
+const { startHeartbeat, stopHeartbeat } = require('./services/heartbeat');
 const { getStorageStats } = require('./services/storage');
+const { log, flushToApi } = require('./services/localLog');
 const photosRouter = require('./routes/photos');
 const setupRouter = require('./routes/setup');
 
@@ -26,40 +28,56 @@ app.get('/status', (_req, res) => {
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-// ── WiFi state watcher ───────────────────────────────────────────────────────
-// Tracks connection state and reacts when WiFi connects or disconnects
-let heartbeatStarted = false;
-let inHotspotMode = false;
+// ── WiFi root-cause capture ──────────────────────────────────────────────────
+function getDisconnectReason() {
+  try {
+    const out = execSync('journalctl -u NetworkManager -n 30 --no-pager --output=short 2>/dev/null').toString();
+    const lines = out.split('\n').filter(l =>
+      /disconnect|deauth|timeout|failed|error|lost/i.test(l)
+    );
+    return lines.at(-1)?.trim() || 'WiFi disconnected (reason unknown)';
+  } catch {
+    return 'WiFi disconnected (could not read NetworkManager logs)';
+  }
+}
 
-function watchWifi() {
+// ── WiFi state watcher ───────────────────────────────────────────────────────
+let heartbeatRunning = false;
+let inHotspotMode = false;
+let wasConnected = null;
+
+async function watchWifi() {
   const connected = isWifiConnected();
 
-  if (connected && !heartbeatStarted) {
-    // WiFi just became available (either on boot or after setup/reconnect)
-    console.log('[wifi] Connected — starting heartbeat');
-    if (inHotspotMode) { stopHotspot(); inHotspotMode = false; }
-    startHeartbeat();
-    heartbeatStarted = true;
-  }
-
-  if (!connected && !inHotspotMode && !heartbeatStarted) {
-    // No WiFi on boot — start hotspot for setup
-    console.log('[wifi] No WiFi — starting hotspot for setup');
+  // Boot: no WiFi → start hotspot
+  if (!connected && wasConnected === null && !inHotspotMode) {
+    log('warn', 'wifi', 'No WiFi on boot — starting hotspot for setup');
     startHotspot();
     inHotspotMode = true;
-    console.log(`[wifi] Connect to "${config.hotspotSsid}" and open http://192.168.4.1:${config.port}/setup`);
   }
 
-  if (!connected && heartbeatStarted) {
-    // WiFi dropped while running — NetworkManager will reconnect automatically
-    // heartbeat will resume once WiFi is back (next successful fetch)
-    console.log('[wifi] WiFi dropped — waiting for reconnect...');
-    heartbeatStarted = false; // allow restart when reconnected
+  // WiFi just connected (boot or after setup or after drop)
+  if (connected && !heartbeatRunning) {
+    if (inHotspotMode) { stopHotspot(); inHotspotMode = false; }
+    log('info', 'wifi', 'WiFi connected — flushing logs and starting heartbeat');
+    await flushToApi();
+    startHeartbeat();
+    heartbeatRunning = true;
   }
+
+  // WiFi dropped while running
+  if (!connected && wasConnected === true && heartbeatRunning) {
+    const reason = getDisconnectReason();
+    log('warn', 'wifi', 'WiFi disconnected — heartbeat paused', { reason });
+    stopHeartbeat();
+    heartbeatRunning = false;
+  }
+
+  wasConnected = connected;
 }
 
 app.listen(config.port, () => {
   console.log(`Viviti device server running on port ${config.port}`);
   watchWifi();
-  setInterval(watchWifi, 10 * 1000); // check every 10s
+  setInterval(watchWifi, 10 * 1000);
 });
