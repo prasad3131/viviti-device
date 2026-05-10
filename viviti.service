@@ -1,0 +1,22 @@
+[Unit]
+Description=Viviti Device Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/viviti
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=viviti
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=PHOTO_DIR=/media/usb/photos
+Environment=VIVITI_API_URL=https://vivitionline.com
+Environment=RELAY_URL=
+
+[Install]
+WantedBy=multi-user.target
