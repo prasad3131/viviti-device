@@ -12,7 +12,7 @@ let cachedNetworks = [];
 
 function isWifiConnected() {
   try {
-    const out = execSync('nmcli -t -f TYPE,STATE d').toString();
+    const out = execSync('nmcli -t -f TYPE,STATE d', { stdio: 'pipe' }).toString();
     return out.split('\n').some(l => l.startsWith('wifi:connected'));
   } catch {
     return false;

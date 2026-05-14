@@ -31,7 +31,7 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 // ── WiFi root-cause capture ──────────────────────────────────────────────────
 function getDisconnectReason() {
   try {
-    const out = execSync('journalctl -u NetworkManager -n 30 --no-pager --output=short 2>/dev/null').toString();
+    const out = execSync('journalctl -u NetworkManager -n 30 --no-pager --output=short 2>/dev/null', { stdio: 'pipe' }).toString();
     const lines = out.split('\n').filter(l =>
       /disconnect|deauth|timeout|failed|error|lost/i.test(l)
     );
