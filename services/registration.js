@@ -15,7 +15,7 @@ async function tryRegister(name, ownerEmail, token) {
     return false;
   }
 
-  config.saveConfig({ name, token });
+  config.saveConfig({ name, token, pendingName: null, pendingEmail: null });
   log('info', 'registration', 'Device registered successfully', { name, owner_email: ownerEmail });
   return true;
 }

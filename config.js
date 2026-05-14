@@ -24,6 +24,8 @@ const config = {
   hotspotPassword: 'viviti123',
   get deviceToken() { return loadConfig().token || ''; },
   get deviceName() { return loadConfig().name || 'Viviti Device'; },
+  get pendingName() { return loadConfig().pendingName || ''; },
+  get pendingEmail() { return loadConfig().pendingEmail || ''; },
   saveConfig,
 };
 

@@ -2,6 +2,7 @@ const express = require('express');
 const { scanWifiNetworks, connectToWifi, stopHotspot } = require('../services/wifi');
 const { registerDevice } = require('../services/registration');
 const { log } = require('../services/localLog');
+const config = require('../config');
 
 const router = express.Router();
 
@@ -110,6 +111,7 @@ router.post('/wifi', async (req, res) => {
       await connectToWifi(ssid, password);
       await new Promise(r => setTimeout(r, 5000));
       log('info', 'setup', 'WiFi connected — registering device', { deviceName, ownerEmail });
+      config.saveConfig({ pendingName: deviceName, pendingEmail: ownerEmail });
       await registerDevice(deviceName, ownerEmail);
     } catch (err) {
       log('error', 'setup', 'Post-setup task failed', { error: err.message });

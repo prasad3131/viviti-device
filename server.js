@@ -5,6 +5,7 @@ const { isWifiConnected, startHotspot, stopHotspot } = require('./services/wifi'
 const { startHeartbeat, stopHeartbeat } = require('./services/heartbeat');
 const { getStorageStats } = require('./services/storage');
 const { log, flushToApi } = require('./services/localLog');
+const { registerDevice } = require('./services/registration');
 const photosRouter = require('./routes/photos');
 const setupRouter = require('./routes/setup');
 
@@ -63,6 +64,10 @@ async function watchWifi() {
     await flushToApi();
     startHeartbeat();
     heartbeatRunning = true;
+    if (!config.deviceToken && config.pendingName && config.pendingEmail) {
+      log('info', 'wifi', 'Device unregistered — retrying registration');
+      registerDevice(config.pendingName, config.pendingEmail).catch(() => {});
+    }
   }
 
   // WiFi dropped while running
