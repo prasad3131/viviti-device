@@ -108,6 +108,7 @@ router.post('/wifi', async (req, res) => {
       await new Promise(r => setTimeout(r, 2000));
       log('info', 'setup', 'Connecting to WiFi', { ssid });
       await connectToWifi(ssid, password);
+      await new Promise(r => setTimeout(r, 5000));
       log('info', 'setup', 'WiFi connected — registering device', { deviceName, ownerEmail });
       await registerDevice(deviceName, ownerEmail);
     } catch (err) {
