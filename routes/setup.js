@@ -97,20 +97,23 @@ router.post('/wifi', async (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
-  try {
-    log('info', 'setup', 'Connecting to WiFi', { ssid });
-    await connectToWifi(ssid, password);
+  log('info', 'setup', 'Setup submitted — switching to home WiFi', { ssid, deviceName, ownerEmail });
 
-    log('info', 'setup', 'WiFi connected — registering device', { deviceName, ownerEmail });
-    const registered = await registerDevice(deviceName, ownerEmail);
-    if (!registered) return res.status(500).json({ error: 'WiFi connected but device registration failed — try again' });
+  // Respond before stopping hotspot — phone loses connection when AP goes down
+  res.json({ ok: true });
 
-    stopHotspot();
-    res.json({ ok: true });
-  } catch (err) {
-    log('error', 'setup', 'WiFi connection failed', { ssid, error: err.message });
-    res.status(500).json({ error: 'Could not connect to WiFi — check password and try again' });
-  }
+  setImmediate(async () => {
+    try {
+      stopHotspot();
+      await new Promise(r => setTimeout(r, 2000));
+      log('info', 'setup', 'Connecting to WiFi', { ssid });
+      await connectToWifi(ssid, password);
+      log('info', 'setup', 'WiFi connected — registering device', { deviceName, ownerEmail });
+      await registerDevice(deviceName, ownerEmail);
+    } catch (err) {
+      log('error', 'setup', 'Post-setup task failed', { error: err.message });
+    }
+  });
 });
 
 module.exports = router;
