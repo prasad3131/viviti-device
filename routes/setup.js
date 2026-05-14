@@ -117,4 +117,11 @@ router.post('/wifi', async (req, res) => {
   });
 });
 
+router.get('/register', async (req, res) => {
+  const { name, email } = req.query;
+  if (!name || !email) return res.status(400).json({ error: 'name and email required' });
+  const ok = await registerDevice(name, email);
+  res.json({ ok });
+});
+
 module.exports = router;
