@@ -6,6 +6,7 @@ const { startHeartbeat, stopHeartbeat } = require('./services/heartbeat');
 const { getStorageStats } = require('./services/storage');
 const { log, flushToApi } = require('./services/localLog');
 const { registerDevice } = require('./services/registration');
+const { startRelay, stopRelay } = require('./services/relay');
 const photosRouter = require('./routes/photos');
 const setupRouter = require('./routes/setup');
 
@@ -20,6 +21,7 @@ app.get('/status', (_req, res) => {
   res.json({
     name: config.deviceName,
     token: config.deviceToken,
+    relay_url: config.relayUrl,
     wifi: isWifiConnected(),
     total_bytes,
     available_bytes,
@@ -63,6 +65,7 @@ async function watchWifi() {
     log('info', 'wifi', 'WiFi connected — flushing logs and starting heartbeat');
     await flushToApi();
     startHeartbeat();
+    startRelay();
     heartbeatRunning = true;
     if (!config.deviceToken && config.pendingName && config.pendingEmail) {
       log('info', 'wifi', 'Device unregistered — retrying registration');
@@ -75,6 +78,7 @@ async function watchWifi() {
     const reason = getDisconnectReason();
     log('warn', 'wifi', 'WiFi disconnected — heartbeat paused', { reason });
     stopHeartbeat();
+    stopRelay();
     heartbeatRunning = false;
   }
 

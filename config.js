@@ -26,6 +26,7 @@ const config = {
   get deviceName() { return loadConfig().name || 'Viviti Device'; },
   get pendingName() { return loadConfig().pendingName || ''; },
   get pendingEmail() { return loadConfig().pendingEmail || ''; },
+  get deviceId() { return loadConfig().deviceId || ''; },
   saveConfig,
 };
 
