@@ -1,0 +1,6 @@
+[Unit]
+Description=WiFi Watchdog
+
+[Service]
+Type=oneshot
+ExecStart=/opt/viviti/wifi-watchdog.sh

@@ -1,0 +1,9 @@
+[Unit]
+Description=WiFi Watchdog Timer
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target
