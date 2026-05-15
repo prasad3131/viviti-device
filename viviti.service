@@ -15,7 +15,7 @@ StandardError=journal
 SyslogIdentifier=viviti
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=PHOTO_DIR=/media/usb/photos
+Environment=PHOTO_DIR=/opt/viviti/photos
 Environment=VIVITI_API_URL=https://vivitionline.com
 Environment=RELAY_URL=
 
