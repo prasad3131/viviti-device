@@ -6,7 +6,7 @@ async function tryRegister(name, ownerEmail, token) {
   const res = await fetch(`${config.vivitiApiUrl}/api/devices`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, owner_email: ownerEmail, token }),
+    body: JSON.stringify({ name, owner_email: ownerEmail, token, relay_url: config.relayUrl }),
   });
 
   if (!res.ok) {
@@ -15,7 +15,8 @@ async function tryRegister(name, ownerEmail, token) {
     return false;
   }
 
-  config.saveConfig({ name, token, pendingName: null, pendingEmail: null });
+  const { device } = await res.json();
+  config.saveConfig({ name, token, deviceId: device?.id ?? null, pendingName: null, pendingEmail: null });
   log('info', 'registration', 'Device registered successfully', { name, owner_email: ownerEmail });
   return true;
 }
