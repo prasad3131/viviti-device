@@ -131,8 +131,18 @@ function connect() {
   const url = `${config.relayUrl}?token=${config.deviceToken}`;
   ws = new WebSocket(url);
 
+  let lastHb = Date.now();
+  const hbCheck = setInterval(() => {
+    if (Date.now() - lastHb > 60000) {
+      log('warn', 'relay', 'No heartbeat for 60s — reconnecting');
+      clearInterval(hbCheck);
+      ws.terminate();
+    }
+  }, 30000);
+
   ws.on('open', () => {
     reconnectDelay = 5000;
+    lastHb = Date.now();
     ws.send(JSON.stringify({ role: 'device', local_ip: getLocalIp() }));
     log('info', 'relay', 'Connected to relay');
   });
@@ -140,7 +150,7 @@ function connect() {
   ws.on('message', async (data) => {
     try {
       const msg = JSON.parse(data.toString());
-      if (msg.type === 'hb') return;
+      if (msg.type === 'hb') { lastHb = Date.now(); return; }
 
       if (msg.type === 'http_req') {
         const response = await handleHttpReq(msg);
@@ -156,6 +166,7 @@ function connect() {
   });
 
   ws.on('close', () => {
+    clearInterval(hbCheck);
     ws = null;
     reconnectTimer = setTimeout(() => { reconnectTimer = null; connect(); }, reconnectDelay);
     reconnectDelay = Math.min(reconnectDelay * 2, 60000);
