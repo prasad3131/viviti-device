@@ -93,6 +93,31 @@ router.post('/upload', upload.array('photos', 50), (req, res) => {
   res.json({ uploaded: req.files.map(f => ({ name: f.filename, size: f.size })) });
 });
 
+// ── Base64 upload (used by relay / WebRTC when not on same WiFi) ─────────────
+
+router.post('/upload-base64', async (req, res) => {
+  const { path: folderPath, files } = req.body;
+  if (!Array.isArray(files) || files.length === 0) {
+    return res.status(400).json({ error: 'No files' });
+  }
+  const dir = safeDirPath(folderPath);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const saved = [];
+    for (const file of files) {
+      if (!file.data || !file.name) continue;
+      const safeName = `${Date.now()}-${path.basename(String(file.name))}`;
+      const fp = path.join(dir, safeName);
+      if (!fp.startsWith(config.photoDir)) continue;
+      fs.writeFileSync(fp, Buffer.from(file.data, 'base64'));
+      saved.push(safeName);
+    }
+    res.json({ uploaded: saved.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Batch delete ──────────────────────────────────────────────────────────────
 
 router.delete('/files', (req, res) => {
